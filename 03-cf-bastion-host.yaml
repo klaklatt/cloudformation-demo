@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >-
+  This Template creates a ec2 instance as a bastion host to connect to the instances
+
+Parameters:
+  BaseProjectStackName:
+    Type: String
+    Description: Stack Name of Base Infrastructure Project for Import of Resource IDs
+    Default: cf-demo-base
+  AppProjectStackName:
+    Type: String
+    Description: Stack Name of the Demo Project for Import of Resource IDs
+    Default: cf-demo-app
+  BastionInstanceType:
+    Type: String
+    Description: Instance Type for the Bastion Host.
+    Default: t2.micro
+
+Mappings:
+  Region:
+    eu-central-1:
+      Ec2ImageId: ami-0d51a78a0a50b60e1
+    eu-west-1:
+      Ec2ImageId: ami-0fad7378adf284ce0
+    us-east-1:
+      Ec2ImageId: ami-0742b4e673072066f
+
+Resources:
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the Bastion Host
+      VpcId: !ImportValue 
+        'Fn::Sub': '${BaseProjectStackName}-VpcId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 22
+          ToPort: 22
+      Tags:
+        - Key: Name
+          Value: Bastion Security Group
+  BastionInstance: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !FindInMap [Region, !Ref "AWS::Region", Ec2ImageId] 
+      InstanceType: !Ref BastionInstanceType
+      SecurityGroupIds: 
+        - !Ref BastionSecurityGroup
+      SubnetId: !ImportValue 
+        'Fn::Sub': '${BaseProjectStackName}-PublicSubnet01'
+      Tags:
+        - Key: Name
+          Value: Bastion Host
+  Ec2SecurityGroupIngressFromBastionSG:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties: 
+      GroupId: !ImportValue 
+        'Fn::Sub': '${AppProjectStackName}-Ec2SecurityGroupId'
+      IpProtocol: tcp
+      SourceSecurityGroupId: !GetAtt BastionSecurityGroup.GroupId
+      FromPort: 22
+      ToPort: 22
+
+Outputs:
+  BastionHostIP:
+    Description: Public IP of Bastion Host
+    Value: !GetAtt BastionInstance.PublicIp
