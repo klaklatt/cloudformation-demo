@@ -57,6 +57,7 @@ aws --region eu-central-1 cloudformation deploy --stack-name=cf-demo-bastion-hos
 To cleanup your aws cloudformation stacks execute following commands:
 
 ```bash
-aws cloudformation delete-stack --stack-name=cf-demo-base --region eu-central-1
 aws cloudformation delete-stack --stack-name=cf-demo-app --region eu-central-1
+aws cloudformation delete-stack --stack-name=cf-demo-base --region eu-central-1
+aws cloudformation delete-stack --stack-name=cf-demo-bastion-host --region eu-central-1
 ```
