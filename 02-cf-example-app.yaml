@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >-
+  This Template creates a basic application example, including 3 ec2 instances and a loadbalancer.
+
+Parameters:
+  BaseProjectStackName:
+    Type: String
+    Description: Stack Name of Base Infrastructure Project for Import of Resource IDs
+    Default: cf-demo-base
+  Ec2InstanceType:
+    Type: String
+    Description: Instance Type for the EC2 instances.
+    Default: t2.micro
+  Ec2UserData:
+    Type: String
+    Description: Initial Script for the application.
+    Default: >-
+      #!/bin/bash
+      yum update -y
+      yum install -y httpd.x86_64
+      systemctl start httpd.service
+      systemctl enable httpd.service
+      echo "Hello World from $(hostname -f)" > /var/www/html/index.html
+
+Mappings:
+  Region:
+    eu-central-1:
+      Ec2ImageId: ami-0d51a78a0a50b60e1
+    eu-west-1:
+      Ec2ImageId: ami-0fad7378adf284ce0
+    us-east-1:
+      Ec2ImageId: ami-0742b4e673072066f
+
+Resources:
+  ElbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the ELB
+      VpcId: !ImportValue 
+        'Fn::Sub': '${BaseProjectStackName}-VpcId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: ELB Security Group
+  Ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for demo app servers
+      VpcId: !ImportValue 
+        'Fn::Sub': '${BaseProjectStackName}-VpcId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          SourceSecurityGroupId: !GetAtt ElbSecurityGroup.GroupId
+          FromPort: 80
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: Demo App Server Security Group
+  Ec2Instance01: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !FindInMap [Region, !Ref "AWS::Region", Ec2ImageId] 
+      InstanceType: !Ref Ec2InstanceType
+      SecurityGroupIds: 
+        - !Ref Ec2SecurityGroup
+      SubnetId: !ImportValue 
+        'Fn::Sub': '${BaseProjectStackName}-PrivateSubnet01'
+      UserData: !Base64
+        Ref: Ec2UserData
+      Tags:
+        - Key: Name
+          Value: Demo App Server 01
+  Ec2Instance02: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !FindInMap [Region, !Ref "AWS::Region", Ec2ImageId] 
+      InstanceType: !Ref Ec2InstanceType
+      SecurityGroupIds: 
+        - !Ref Ec2SecurityGroup
+      SubnetId: !ImportValue 
+        'Fn::Sub': '${BaseProjectStackName}-PrivateSubnet02'
+      UserData: !Base64
+        Ref: Ec2UserData
+      Tags:
+        - Key: Name
+          Value: Demo App Server 02
+  Ec2Instance03: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !FindInMap [Region, !Ref "AWS::Region", Ec2ImageId] 
+      InstanceType: !Ref Ec2InstanceType
+      SecurityGroupIds: 
+        - !Ref Ec2SecurityGroup
+      SubnetId: !ImportValue 
+        'Fn::Sub': '${BaseProjectStackName}-PrivateSubnet03'
+      UserData: !Base64
+        Ref: Ec2UserData
+      Tags:
+        - Key: Name
+          Value: Demo App Server 03
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Name: Demo-App-ELB
+      Type: application
+      SecurityGroups: 
+        - !Ref ElbSecurityGroup
+      Subnets: 
+        - !ImportValue 
+          'Fn::Sub': '${BaseProjectStackName}-PublicSubnet01'
+        - !ImportValue 
+          'Fn::Sub': '${BaseProjectStackName}-PublicSubnet02'
+        - !ImportValue 
+          'Fn::Sub': '${BaseProjectStackName}-PublicSubnet03'
+      Tags:
+        - Key: Name
+          Value: Demo App Load Balancer
+  LoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      Name: Demo-App-ELB-Target-Group
+      Port: 80
+      Protocol: HTTP
+      VpcId: !ImportValue 
+        'Fn::Sub': '${BaseProjectStackName}-VpcId'
+      Targets: 
+        - Id: !Ref Ec2Instance01
+        - Id: !Ref Ec2Instance02
+        - Id: !Ref Ec2Instance03
+      Tags:
+        - Key: Name
+          Value: Demo App LB Target Group
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref LoadBalancerTargetGroup
