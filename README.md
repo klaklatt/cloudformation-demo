@@ -39,5 +39,14 @@ File: 02-cf-example-app.yaml
 This template creates 3 ec2 instances and a loadbalancer as an example.
 
 ```bash
-aws --region eu-central-1 cloudformation deploy --stack-name=CF-Demo-APP --template-file=02-cf-example-app.yaml
+aws --region eu-central-1 cloudformation deploy --stack-name=cf-demo-app --template-file=02-cf-example-app.yaml
+```
+
+### Cleanup
+
+To cleanup your aws cloudformation stacks execute following commands:
+
+```bash
+aws cloudformation delete-stack --stack-name=cf-demo-base --region eu-central-1
+aws cloudformation delete-stack --stack-name=cf-demo-app --region eu-central-1
 ```
