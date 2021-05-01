@@ -28,7 +28,6 @@ This template creates following resources:
 - 3 public networks (1 for each az as well)
 - Internet Gateway
 - Nat Gateway in each zone
-- EC2 Bastion Host
 
 ```bash
 aws --region eu-central-1 cloudformation deploy --stack-name=cf-demo-base --template-file=01-cf-base-infrastructure.yaml
