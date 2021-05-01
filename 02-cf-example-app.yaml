@@ -144,3 +144,10 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref LoadBalancerTargetGroup
+
+Outputs:
+  Ec2SecurityGroupId:
+    Description: Group ID of EC2 Security Group
+    Value: !GetAtt Ec2SecurityGroup.GroupId
+    Export:
+      Name: !Sub "${AWS::StackName}-Ec2SecurityGroupId"
